@@ -1,0 +1,84 @@
+name: Build APK (Manual)
+
+# Hanya berjalan saat kamu menekan "Run workflow" di tab Actions.
+# Tidak ada pemicu otomatis (push, tag, atau pull request).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Nomor versi (contoh: 1.0.0)"
+        required: true
+        default: "1.0.0"
+      release:
+        description: "Publikasikan ke GitHub Release?"
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build APK Release
+    runs-on: ubuntu-latest
+    env:
+      # Opsional: tanda tangan rilis dari Repository secrets
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Terima lisensi Android SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Siapkan Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Siapkan keystore rilis (jika ada)
+        if: env.KEYSTORE_BASE64 != ''
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build APK release
+        run: gradle assembleRelease --no-daemon --stacktrace -PappVersionName="$VERSION" -PappVersionCode="${{ github.run_number }}"
+
+      - name: Ganti nama APK
+        run: cp app/build/outputs/apk/release/app-release.apk "SusunBlock-v${VERSION}.apk"
+
+      - name: Unggah artefak
+        uses: actions/upload-artifact@v4
+        with:
+          name: SusunBlock-v${{ inputs.version }}
+          path: SusunBlock-v${{ inputs.version }}.apk
+
+      - name: Buat GitHub Release
+        if: ${{ inputs.release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: Susun Block v${{ inputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: SusunBlock-v${{ inputs.version }}.apk
+          body: |
+            ## Susun Block v${{ inputs.version }}
+            Unduh file `.apk` di bawah lalu pasang di Android 7.0 (API 24) ke atas.
+
+            **Developer:** Hanz Dev Official
+            **Dukung developer:** https://saweria.co/hanzreally
+            **Kontak:** hanzzcodee@gmail.com

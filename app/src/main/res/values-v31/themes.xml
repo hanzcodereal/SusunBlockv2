@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SusunBlock" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <!-- Splash bawaan Android 12+ memakai warna latar yang sama agar tidak berkedip -->
+        <item name="android:windowSplashScreenBackground">@color/bg</item>
+    </style>
+</resources>
